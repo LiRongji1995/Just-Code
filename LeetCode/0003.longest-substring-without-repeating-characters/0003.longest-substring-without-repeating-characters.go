@@ -15,8 +15,10 @@ func lengthOfLongestSubstring(s string) int {
 	//使用 -1 的好处：使用 -1 初始化，代码中的检查条件（如 right + 1 < len(s)）清晰地指示何时可以尝试扩展右边界，同时避免直接访问 s[right] 的问题。
 	//避免错误：如果 right 初始化为 0，在窗口一开始是空的时候可能需要特殊处理，增加了代码的复杂度。
 	for left < len(s) {
-		if right+1 < len(s) && freq[s[right+1]-'a'] == 0 {
-			freq[s[right+1]-'a']++ //-'a' 的目的是将字符转换为对应的索引值，以便在数组（这里是 freq 数组）中正确地记录字符的频率。
+		if right+1 < len(s) && freq[s[right+1]-'a'] == 0 { //如果 right 指针右侧的下一个字符还可以被加入，
+			// 并且这个字符在窗口中还没有出现过，那么我们就可以将这个字符加入到窗口中。
+			// -'a' 的目的是将字符转换为对应的索引值，以便在数组（这里是 freq 数组）中正确地记录字符的频率。
+			freq[s[right+1]-'a']++ //将字符 s[right+1] 加入滑动窗口并增加其频率计数。
 			right++
 		} else {
 			freq[s[left]-'a']--

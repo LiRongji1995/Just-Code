@@ -18,6 +18,7 @@ func convert(s string, numRows int) string {
 			down = 0
 		}
 	}
+	//遍历 matrix 中的每一行，将其字符追加到 solution 字节切片中，最终返回拼接后的字符串
 	solution := make([]byte, 0, len(s))
 	for _, row := range matrix {
 		for _, item := range row {

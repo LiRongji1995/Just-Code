@@ -1,1 +1,0 @@
-package Go_study_script

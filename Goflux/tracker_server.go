@@ -6,8 +6,15 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"log"
+	"math"
+	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
+	"sort"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -81,12 +88,14 @@ type TrackerStats struct {
 
 // Tracker服务器
 type TrackerServer struct {
-	config  *Config
-	redis   *redis.Client
-	logger  *zap.Logger
-	metrics *TrackerMetrics
-	ctx     context.Context
-	cancel  context.CancelFunc
+	config     *Config
+	redis      *redis.Client
+	logger     *zap.Logger
+	metrics    *TrackerMetrics
+	ctx        context.Context
+	cancel     context.CancelFunc
+	httpServer *http.Server
+	wg         sync.WaitGroup
 }
 
 // Prometheus指标
@@ -96,6 +105,12 @@ type TrackerMetrics struct {
 	activePeers      prometheus.Gauge
 	activeFiles      prometheus.Gauge
 	errorCounter     prometheus.Counter
+
+	// 新增指标
+	blacklistedRequests prometheus.Counter
+	responseTime        prometheus.Histogram
+	peersByType         *prometheus.GaugeVec // seeders vs leechers
+	topFiles            prometheus.Gauge     // 热门文件数量
 }
 
 // 初始化指标
@@ -121,6 +136,23 @@ func NewTrackerMetrics() *TrackerMetrics {
 			Name: "tracker_errors_total",
 			Help: "Total number of errors",
 		}),
+		blacklistedRequests: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "tracker_blacklisted_requests_total",
+			Help: "Total number of blocked requests due to blacklist",
+		}),
+		responseTime: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Name:    "tracker_response_time_seconds",
+			Help:    "Response time of tracker requests",
+			Buckets: prometheus.DefBuckets, // 默认桶
+		}),
+		peersByType: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "tracker_peers_by_type",
+			Help: "Number of peers by type (seeder/leecher)",
+		}, []string{"type"}),
+		topFiles: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "tracker_top_files",
+			Help: "Number of files in top rankings",
+		}),
 	}
 }
 
@@ -132,6 +164,10 @@ func (m *TrackerMetrics) Register() {
 		m.activePeers,
 		m.activeFiles,
 		m.errorCounter,
+		m.blacklistedRequests,
+		m.responseTime,
+		m.peersByType,
+		m.topFiles,
 	)
 }
 
@@ -187,6 +223,14 @@ func (ts *TrackerServer) getStatsKey(fileHash string) string {
 	return fmt.Sprintf("file:%s:stats", fileHash)
 }
 
+func (ts *TrackerServer) getIPBlacklistKey() string {
+	return "tracker:ip_blacklist"
+}
+
+func (ts *TrackerServer) getFileStatsZSetKey() string {
+	return "tracker:file_stats"
+}
+
 // 处理announce请求
 func (ts *TrackerServer) handleAnnounce(c *gin.Context) {
 	ts.metrics.announceRequests.Inc()
@@ -202,6 +246,21 @@ func (ts *TrackerServer) handleAnnounce(c *gin.Context) {
 	// 获取客户端IP（如果请求中没有提供）
 	if req.IP == "" {
 		req.IP = c.ClientIP()
+	}
+
+	// IP黑名单检查
+	if ts.isIPBlacklisted(req.IP) {
+		ts.metrics.blacklistedRequests.Inc()
+		ts.logger.Warn("Blocked IP attempt", zap.String("ip", req.IP))
+		c.JSON(http.StatusForbidden, gin.H{"error": "IP blocked"})
+		return
+	}
+
+	// 限制每个文件的最大peer数
+	if ts.exceedsMaxPeers(req.FileHash) {
+		ts.logger.Warn("File has too many peers", zap.String("file_hash", req.FileHash))
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "File has reached maximum peer limit"})
+		return
 	}
 
 	// 设置默认numwant
@@ -233,8 +292,8 @@ func (ts *TrackerServer) handleAnnounce(c *gin.Context) {
 		ts.addOrUpdatePeer(ctx, req.FileHash, peer)
 	}
 
-	// 获取peer列表
-	peers, err := ts.getPeers(ctx, req.FileHash, req.PeerID, req.NumWant)
+	// 获取peer列表（使用nearest peer策略）
+	peers, err := ts.getPeersOptimized(ctx, req.FileHash, req.PeerID, req.IP, req.NumWant)
 	if err != nil {
 		ts.metrics.errorCounter.Inc()
 		ts.logger.Error("Failed to get peers", zap.Error(err))
@@ -268,20 +327,26 @@ func (ts *TrackerServer) addOrUpdatePeer(ctx context.Context, fileHash string, p
 		return err
 	}
 
-	// 存储peer信息
-	peerKey := ts.getPeerKey(fileHash, peer.PeerID)
-	if err := ts.redis.Set(ctx, peerKey, peerData, time.Duration(ts.config.PeerTTL)*time.Second).Err(); err != nil {
+	// 使用HSET优化：把每个file的所有peer放在一个hash中，减少key数量
+	fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
+	if err := ts.redis.HSet(ctx, fileHashKey, peer.PeerID, peerData).Err(); err != nil {
 		return err
 	}
 
-	// 添加到文件的peer集合
-	fileKey := ts.getFileKey(fileHash)
-	if err := ts.redis.SAdd(ctx, fileKey, peer.PeerID).Err(); err != nil {
-		return err
-	}
+	// 设置hash的TTL
+	ts.redis.Expire(ctx, fileHashKey, time.Duration(ts.config.PeerTTL)*time.Second)
 
-	// 设置文件key的TTL
-	ts.redis.Expire(ctx, fileKey, time.Duration(ts.config.PeerTTL)*time.Second)
+	// 使用timestamp进行排序，便于查找最新的peer
+	timestampZSet := fmt.Sprintf("file:%s:peer_timestamps", fileHash)
+	ts.redis.ZAdd(ctx, timestampZSet, redis.Z{
+		Score:  float64(peer.LastSeen.Unix()),
+		Member: peer.PeerID,
+	})
+	ts.redis.Expire(ctx, timestampZSet, time.Duration(ts.config.PeerTTL)*time.Second)
+
+	// 更新文件统计的ZSet，用于快速获取热门文件
+	fileStatsKey := ts.getFileStatsZSetKey()
+	ts.redis.ZIncrBy(ctx, fileStatsKey, 1, fileHash)
 
 	// 更新统计信息
 	ts.updateFileStats(ctx, fileHash, peer)
@@ -291,13 +356,13 @@ func (ts *TrackerServer) addOrUpdatePeer(ctx context.Context, fileHash string, p
 
 // 移除peer
 func (ts *TrackerServer) removePeer(ctx context.Context, fileHash, peerID string) error {
-	// 删除peer信息
-	peerKey := ts.getPeerKey(fileHash, peerID)
-	ts.redis.Del(ctx, peerKey)
+	// 从hash中删除peer信息
+	fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
+	ts.redis.HDel(ctx, fileHashKey, peerID)
 
-	// 从文件的peer集合中移除
-	fileKey := ts.getFileKey(fileHash)
-	ts.redis.SRem(ctx, fileKey, peerID)
+	// 从timestamp ZSet中移除
+	timestampZSet := fmt.Sprintf("file:%s:peer_timestamps", fileHash)
+	ts.redis.ZRem(ctx, timestampZSet, peerID)
 
 	return nil
 }
@@ -341,6 +406,192 @@ func (ts *TrackerServer) getPeers(ctx context.Context, fileHash, excludePeerID s
 	return peers, nil
 }
 
+// 优化的获取peer列表方法（使用HGETALL和ZSet排序）
+func (ts *TrackerServer) getPeersOptimized(ctx context.Context, fileHash, excludePeerID, requestIP string, numWant int) ([]PeerInfo, error) {
+	// 使用HGETALL一次性获取所有peer数据
+	fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
+	allPeerData, err := ts.redis.HGetAll(ctx, fileHashKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var allPeers []PeerInfo
+	for peerID, peerDataStr := range allPeerData {
+		if peerID == excludePeerID {
+			continue
+		}
+
+		var peer PeerInfo
+		if err := json.Unmarshal([]byte(peerDataStr), &peer); err != nil {
+			continue
+		}
+		allPeers = append(allPeers, peer)
+	}
+
+	// 实现nearest peer策略：优先返回同网段的peer
+	peers := ts.selectNearestPeers(allPeers, requestIP, numWant)
+
+	return peers, nil
+}
+
+// IP黑名单检查 - 增强版
+func (ts *TrackerServer) isIPBlacklisted(ip string) bool {
+	ctx := context.Background()
+	blacklistKey := ts.getIPBlacklistKey()
+
+	// 检查完整IP
+	exists, err := ts.redis.SIsMember(ctx, blacklistKey, ip).Result()
+	if err != nil || exists {
+		return exists
+	}
+
+	// 检查各级网段匹配
+	ipParts := strings.Split(ip, ".")
+	if len(ipParts) != 4 {
+		return false
+	}
+
+	// 检查 /24 网段 (192.168.1.*)
+	subnet24 := fmt.Sprintf("%s.%s.%s.*", ipParts[0], ipParts[1], ipParts[2])
+	if exists, _ := ts.redis.SIsMember(ctx, blacklistKey, subnet24).Result(); exists {
+		return true
+	}
+
+	// 检查 /16 网段 (192.168.*.*)
+	subnet16 := fmt.Sprintf("%s.%s.*.*", ipParts[0], ipParts[1])
+	if exists, _ := ts.redis.SIsMember(ctx, blacklistKey, subnet16).Result(); exists {
+		return true
+	}
+
+	// 检查 /8 网段 (192.*.*.*)
+	subnet8 := fmt.Sprintf("%s.*.*.*", ipParts[0])
+	if exists, _ := ts.redis.SIsMember(ctx, blacklistKey, subnet8).Result(); exists {
+		return true
+	}
+
+	return false
+}
+
+// 检查文件是否超过最大peer数限制
+func (ts *TrackerServer) exceedsMaxPeers(fileHash string) bool {
+	ctx := context.Background()
+	fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
+
+	count, err := ts.redis.HLen(ctx, fileHashKey).Result()
+	if err != nil {
+		return false
+	}
+
+	maxPeersPerFile := 1000 // 可配置
+	return count >= int64(maxPeersPerFile)
+}
+
+// 选择最近的peer（网络距离）- 增强版
+func (ts *TrackerServer) selectNearestPeers(allPeers []PeerInfo, requestIP string, numWant int) []PeerInfo {
+	if len(allPeers) <= numWant {
+		return allPeers
+	}
+
+	// 按网络距离和peer质量排序
+	type peerWithScore struct {
+		peer     PeerInfo
+		distance int
+		score    float64 // 综合评分
+	}
+
+	var peersWithScore []peerWithScore
+	requestIPParts := strings.Split(requestIP, ".")
+
+	for _, peer := range allPeers {
+		distance := ts.calculateIPDistance(requestIPParts, strings.Split(peer.IP, "."))
+
+		// 计算综合评分：考虑网络距离、上传量、活跃度
+		score := ts.calculatePeerScore(peer, distance)
+
+		peersWithScore = append(peersWithScore, peerWithScore{
+			peer:     peer,
+			distance: distance,
+			score:    score,
+		})
+	}
+
+	// 按综合评分排序（评分越高越好）
+	sort.Slice(peersWithScore, func(i, j int) bool {
+		return peersWithScore[i].score > peersWithScore[j].score
+	})
+
+	// 策略：70%选择高分peer，30%随机选择（保持网络多样性）
+	var result []PeerInfo
+	highScoreCount := numWant * 7 / 10
+	randomCount := numWant - highScoreCount
+
+	// 添加高分peer
+	for i := 0; i < highScoreCount && i < len(peersWithScore); i++ {
+		result = append(result, peersWithScore[i].peer)
+	}
+
+	// 随机添加一些peer保持网络健康
+	if randomCount > 0 && len(peersWithScore) > highScoreCount {
+		remaining := peersWithScore[highScoreCount:]
+		rand.Shuffle(len(remaining), func(i, j int) {
+			remaining[i], remaining[j] = remaining[j], remaining[i]
+		})
+
+		for i := 0; i < randomCount && i < len(remaining); i++ {
+			result = append(result, remaining[i].peer)
+		}
+	}
+
+	return result
+}
+
+// 计算peer综合评分
+func (ts *TrackerServer) calculatePeerScore(peer PeerInfo, distance int) float64 {
+	// 网络距离评分（距离越近分数越高）
+	networkScore := float64(4-distance) * 25.0 // 0-100分
+
+	// 上传贡献评分（鼓励上传）
+	uploadScore := 0.0
+	if peer.Uploaded > 0 {
+		uploadScore = math.Min(float64(peer.Uploaded)/1024/1024/100, 20.0) // 最多20分，每100MB得1分
+	}
+
+	// 活跃度评分（最近活跃时间）
+	activeScore := 0.0
+	timeSinceLastSeen := time.Since(peer.LastSeen).Minutes()
+	if timeSinceLastSeen < 5 {
+		activeScore = 15.0 // 5分钟内活跃，满分
+	} else if timeSinceLastSeen < 30 {
+		activeScore = 10.0 // 30分钟内活跃
+	} else {
+		activeScore = 5.0 // 其他情况
+	}
+
+	// Seeder优先（完整文件的peer）
+	seederBonus := 0.0
+	if peer.Left == 0 {
+		seederBonus = 10.0
+	}
+
+	return networkScore + uploadScore + activeScore + seederBonus
+}
+
+// 计算IP距离（简单的网段匹配）
+func (ts *TrackerServer) calculateIPDistance(ip1Parts, ip2Parts []string) int {
+	if len(ip1Parts) != 4 || len(ip2Parts) != 4 {
+		return 4 // 最大距离
+	}
+
+	distance := 0
+	for i := 0; i < 4; i++ {
+		if ip1Parts[i] != ip2Parts[i] {
+			distance = 4 - i
+			break
+		}
+	}
+	return distance
+}
+
 // 处理scrape请求
 func (ts *TrackerServer) handleScrape(c *gin.Context) {
 	ts.metrics.scrapeRequests.Inc()
@@ -365,26 +616,18 @@ func (ts *TrackerServer) handleScrape(c *gin.Context) {
 
 // 获取文件统计信息
 func (ts *TrackerServer) getFileStats(ctx context.Context, fileHash string) (*ScrapeResponse, error) {
-	fileKey := ts.getFileKey(fileHash)
+	fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
 
-	// 获取所有peer
-	peerIDs, err := ts.redis.SMembers(ctx, fileKey).Result()
+	// 使用HGETALL一次性获取所有peer
+	allPeerData, err := ts.redis.HGetAll(ctx, fileHashKey).Result()
 	if err != nil {
 		return nil, err
 	}
 
 	var seeders, leechers int
-	for _, peerID := range peerIDs {
-		peerKey := ts.getPeerKey(fileHash, peerID)
-		peerData, err := ts.redis.Get(ctx, peerKey).Result()
-		if err != nil {
-			// 清理过期peer
-			ts.redis.SRem(ctx, fileKey, peerID)
-			continue
-		}
-
+	for _, peerDataStr := range allPeerData {
 		var peer PeerInfo
-		if err := json.Unmarshal([]byte(peerData), &peer); err != nil {
+		if err := json.Unmarshal([]byte(peerDataStr), &peer); err != nil {
 			continue
 		}
 
@@ -418,42 +661,38 @@ func (ts *TrackerServer) updateFileStats(ctx context.Context, fileHash string, p
 	}
 }
 
-// 获取整体统计信息
+// 优化后的统计信息处理 - 使用ZSCAN避免KEYS命令
 func (ts *TrackerServer) handleStats(c *gin.Context) {
 	ctx := context.Background()
 
-	// 获取所有文件key
-	fileKeys, err := ts.redis.Keys(ctx, "file:*:peers").Result()
+	// 使用ZSet来统计活跃文件
+	fileStatsKey := ts.getFileStatsZSetKey()
+	fileHashes, err := ts.redis.ZRevRange(ctx, fileStatsKey, 0, -1).Result()
 	if err != nil {
 		ts.metrics.errorCounter.Inc()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get stats"})
 		return
 	}
 
-	totalFiles := len(fileKeys)
+	totalFiles := len(fileHashes)
 	totalPeers := 0
 	totalSeeders := 0
 	totalLeechers := 0
 
-	for _, fileKey := range fileKeys {
-		peerIDs, err := ts.redis.SMembers(ctx, fileKey).Result()
+	// 遍历活跃文件计算统计信息
+	for _, fileHash := range fileHashes {
+		fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
+		allPeerData, err := ts.redis.HGetAll(ctx, fileHashKey).Result()
 		if err != nil {
 			continue
 		}
 
-		totalPeers += len(peerIDs)
+		totalPeers += len(allPeerData)
 
 		// 计算seeder和leecher
-		fileHash := strings.Split(fileKey, ":")[1]
-		for _, peerID := range peerIDs {
-			peerKey := ts.getPeerKey(fileHash, peerID)
-			peerData, err := ts.redis.Get(ctx, peerKey).Result()
-			if err != nil {
-				continue
-			}
-
+		for _, peerDataStr := range allPeerData {
 			var peer PeerInfo
-			if err := json.Unmarshal([]byte(peerData), &peer); err != nil {
+			if err := json.Unmarshal([]byte(peerDataStr), &peer); err != nil {
 				continue
 			}
 
@@ -468,6 +707,8 @@ func (ts *TrackerServer) handleStats(c *gin.Context) {
 	// 更新Prometheus指标
 	ts.metrics.activePeers.Set(float64(totalPeers))
 	ts.metrics.activeFiles.Set(float64(totalFiles))
+	ts.metrics.peersByType.WithLabelValues("seeder").Set(float64(totalSeeders))
+	ts.metrics.peersByType.WithLabelValues("leecher").Set(float64(totalLeechers))
 
 	stats := TrackerStats{
 		TotalFiles:    totalFiles,
@@ -479,59 +720,71 @@ func (ts *TrackerServer) handleStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-// 定期清理过期数据
+// 优化后的清理程序 - 使用时间戳ZSet进行清理
 func (ts *TrackerServer) startCleanupRoutine() {
+	ts.wg.Add(1)
+	defer ts.wg.Done()
+
 	ticker := time.NewTicker(time.Duration(ts.config.CleanInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			ts.cleanup()
+			ts.cleanupOptimized()
 		case <-ts.ctx.Done():
+			ts.logger.Info("Cleanup routine stopping...")
 			return
 		}
 	}
 }
 
-// 清理过期数据
-func (ts *TrackerServer) cleanup() {
+// 优化的清理方法
+func (ts *TrackerServer) cleanupOptimized() {
 	ctx := context.Background()
 
-	// 获取所有文件key
-	fileKeys, err := ts.redis.Keys(ctx, "file:*:peers").Result()
+	// 获取所有活跃文件的ZSet
+	fileStatsKey := ts.getFileStatsZSetKey()
+	fileHashes, err := ts.redis.ZRevRange(ctx, fileStatsKey, 0, -1).Result()
 	if err != nil {
-		ts.logger.Error("Failed to get file keys for cleanup", zap.Error(err))
+		ts.logger.Error("Failed to get file hashes for cleanup", zap.Error(err))
 		return
 	}
 
 	cleaned := 0
-	for _, fileKey := range fileKeys {
-		peerIDs, err := ts.redis.SMembers(ctx, fileKey).Result()
+	expiredFiles := 0
+
+	// 计算过期时间戳
+	expiredTimestamp := time.Now().Add(-time.Duration(ts.config.PeerTTL) * time.Second).Unix()
+
+	for _, fileHash := range fileHashes {
+		// 使用ZREMRANGEBYSCORE清理过期的peer
+		timestampZSet := fmt.Sprintf("file:%s:peer_timestamps", fileHash)
+		removedCount, err := ts.redis.ZRemRangeByScore(ctx, timestampZSet, "0", fmt.Sprintf("%d", expiredTimestamp)).Result()
 		if err != nil {
 			continue
 		}
 
-		fileHash := strings.Split(fileKey, ":")[1]
-		for _, peerID := range peerIDs {
-			peerKey := ts.getPeerKey(fileHash, peerID)
-			exists, err := ts.redis.Exists(ctx, peerKey).Result()
-			if err != nil || exists == 0 {
-				// Peer已过期，从集合中移除
-				ts.redis.SRem(ctx, fileKey, peerID)
-				cleaned++
-			}
-		}
+		if removedCount > 0 {
+			cleaned += int(removedCount)
 
-		// 如果文件没有活跃peer，删除文件key
-		count, _ := ts.redis.SCard(ctx, fileKey).Result()
-		if count == 0 {
-			ts.redis.Del(ctx, fileKey)
+			// 获取过期的peer ID并从hash中删除
+			fileHashKey := fmt.Sprintf("file:%s:peer_data", fileHash)
+
+			// 如果所有peer都过期了，删除整个文件的数据
+			remainingCount, _ := ts.redis.ZCard(ctx, timestampZSet).Result()
+			if remainingCount == 0 {
+				ts.redis.Del(ctx, fileHashKey, timestampZSet)
+				ts.redis.ZRem(ctx, fileStatsKey, fileHash)
+				expiredFiles++
+			}
 		}
 	}
 
-	if cleaned > 0 {
-		ts.logger.Info("Cleanup completed", zap.Int("cleaned_peers", cleaned))
+	if cleaned > 0 || expiredFiles > 0 {
+		ts.logger.Info("Cleanup completed",
+			zap.Int("cleaned_peers", cleaned),
+			zap.Int("expired_files", expiredFiles))
 	}
 }
 
@@ -551,6 +804,16 @@ func (ts *TrackerServer) Start() error {
 		api.POST("/announce", ts.handleAnnounce)
 		api.GET("/scrape", ts.handleScrape)
 		api.GET("/stats", ts.handleStats)
+
+		// 管理接口
+		admin := api.Group("/admin")
+		{
+			admin.POST("/blacklist/ip", ts.handleAddIPToBlacklist)
+			admin.POST("/blacklist/batch", ts.handleBatchAddToBlacklist)
+			admin.DELETE("/blacklist/ip", ts.handleRemoveIPFromBlacklist)
+			admin.GET("/blacklist/ip", ts.handleGetBlacklist)
+			admin.DELETE("/blacklist/clear", ts.handleClearBlacklist)
+		}
 	}
 
 	// 兼容性路由（直接在根路径）
@@ -565,21 +828,165 @@ func (ts *TrackerServer) Start() error {
 	// Prometheus指标
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
+	// 创建HTTP服务器
+	ts.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", ts.config.ServerPort),
+		Handler: r,
+	}
+
+	ts.logger.Info("Starting tracker server", zap.String("address", ts.httpServer.Addr))
+
 	// 启动服务器
-	addr := fmt.Sprintf(":%d", ts.config.ServerPort)
-	ts.logger.Info("Starting tracker server", zap.String("address", addr))
-
-	return r.Run(addr)
+	return ts.httpServer.ListenAndServe()
 }
 
-// 停止服务器
-func (ts *TrackerServer) Stop() {
+// 优雅关闭服务器
+func (ts *TrackerServer) Shutdown() error {
+	ts.logger.Info("Shutting down tracker server...")
+
+	// 取消context，停止所有协程
 	ts.cancel()
-	ts.redis.Close()
+
+	// 等待清理协程结束
+	ts.wg.Wait()
+
+	// 关闭HTTP服务器
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := ts.httpServer.Shutdown(ctx); err != nil {
+		ts.logger.Error("Failed to shutdown HTTP server gracefully", zap.Error(err))
+		return err
+	}
+
+	// 关闭Redis连接
+	if err := ts.redis.Close(); err != nil {
+		ts.logger.Error("Failed to close Redis connection", zap.Error(err))
+	}
+
+	// 同步日志
 	ts.logger.Sync()
+
+	ts.logger.Info("Tracker server shutdown completed")
+	return nil
 }
 
-// 主函数
+// IP黑名单管理接口
+func (ts *TrackerServer) handleAddIPToBlacklist(c *gin.Context) {
+	var req struct {
+		IP string `json:"ip" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	ctx := context.Background()
+	blacklistKey := ts.getIPBlacklistKey()
+
+	if err := ts.redis.SAdd(ctx, blacklistKey, req.IP).Err(); err != nil {
+		ts.logger.Error("Failed to add IP to blacklist", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add IP"})
+		return
+	}
+
+	ts.logger.Info("IP added to blacklist", zap.String("ip", req.IP))
+	c.JSON(http.StatusOK, gin.H{"message": "IP added to blacklist"})
+}
+
+func (ts *TrackerServer) handleRemoveIPFromBlacklist(c *gin.Context) {
+	var req struct {
+		IP string `json:"ip" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	ctx := context.Background()
+	blacklistKey := ts.getIPBlacklistKey()
+
+	if err := ts.redis.SRem(ctx, blacklistKey, req.IP).Err(); err != nil {
+		ts.logger.Error("Failed to remove IP from blacklist", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove IP"})
+		return
+	}
+
+	ts.logger.Info("IP removed from blacklist", zap.String("ip", req.IP))
+	c.JSON(http.StatusOK, gin.H{"message": "IP removed from blacklist"})
+}
+
+func (ts *TrackerServer) handleGetBlacklist(c *gin.Context) {
+	ctx := context.Background()
+	blacklistKey := ts.getIPBlacklistKey()
+
+	ips, err := ts.redis.SMembers(ctx, blacklistKey).Result()
+	if err != nil {
+		ts.logger.Error("Failed to get blacklist", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get blacklist"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"blacklisted_ips": ips, "count": len(ips)})
+}
+
+// 批量添加黑名单
+func (ts *TrackerServer) handleBatchAddToBlacklist(c *gin.Context) {
+	var req struct {
+		IPs []string `json:"ips" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	ctx := context.Background()
+	blacklistKey := ts.getIPBlacklistKey()
+
+	// 转换为interface{}切片
+	ips := make([]interface{}, len(req.IPs))
+	for i, ip := range req.IPs {
+		ips[i] = ip
+	}
+
+	added, err := ts.redis.SAdd(ctx, blacklistKey, ips...).Result()
+	if err != nil {
+		ts.logger.Error("Failed to batch add IPs to blacklist", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add IPs"})
+		return
+	}
+
+	ts.logger.Info("Batch added IPs to blacklist",
+		zap.Int("requested", len(req.IPs)),
+		zap.Int64("actually_added", added))
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "IPs added to blacklist",
+		"requested": len(req.IPs),
+		"added":     added,
+	})
+}
+
+// 清空黑名单
+func (ts *TrackerServer) handleClearBlacklist(c *gin.Context) {
+	ctx := context.Background()
+	blacklistKey := ts.getIPBlacklistKey()
+
+	count, err := ts.redis.Del(ctx, blacklistKey).Result()
+	if err != nil {
+		ts.logger.Error("Failed to clear blacklist", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear blacklist"})
+		return
+	}
+
+	ts.logger.Info("Blacklist cleared", zap.Int64("deleted_keys", count))
+	c.JSON(http.StatusOK, gin.H{"message": "Blacklist cleared"})
+}
+
+// 主函数 - 实现优雅关闭
 func main() {
 	// 默认配置
 	config := &Config{
@@ -598,8 +1005,22 @@ func main() {
 		log.Fatalf("Failed to create tracker server: %v", err)
 	}
 
-	// 启动服务器
-	if err := server.Start(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// 设置信号处理
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// 启动服务器的goroutine
+	go func() {
+		if err := server.Start(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// 等待关闭信号
+	<-sigChan
+
+	// 执行优雅关闭
+	if err := server.Shutdown(); err != nil {
+		log.Printf("Server shutdown error: %v", err)
 	}
 }

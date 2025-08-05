@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"goflux/engine"
+	"path/filepath"
 )
 
 // GetStatusIcon 根据 JobStatus 返回一个 Unicode 图标
@@ -24,4 +25,9 @@ func getStatusIcon(status engine.JobStatus) string {
 	default:
 		return "❓"
 	}
+}
+
+// getOutputPath 返回文件的保存完整路径
+func getOutputPath(fileName string) string {
+	return filepath.Join("downloads", fileName)
 }

@@ -340,15 +340,16 @@ func getStatusDisplayName(status engine.JobStatus) string {
 
 // displayStatusJSON 以JSON格式显示状态
 func displayStatusJSON(stats engine.EngineStats, jobs []*engine.Job) error {
-	type StatusOutput struct {
-		Engine engine.EngineStats `json:"engine"`
-		Jobs   []JobStatus        `json:"jobs"`
-	}
 
 	type JobStatus struct {
 		ID       string                `json:"id"`
 		Status   engine.JobStatus      `json:"status"`
 		Progress engine.ProgressUpdate `json:"progress"`
+	}
+
+	type StatusOutput struct {
+		Engine engine.EngineStats `json:"engine"`
+		Jobs   []JobStatus        `json:"jobs"`
 	}
 
 	jobStatuses := make([]JobStatus, len(jobs))

@@ -360,11 +360,6 @@ func displayStatusJSON(stats engine.EngineStats, jobs []*engine.Job) error {
 		}
 	}
 
-	output := StatusOutput{
-		Engine: stats,
-		Jobs:   jobStatuses,
-	}
-
 	// 这里需要导入encoding/json包
 	// jsonBytes, err := json.MarshalIndent(output, "", "  ")
 	// if err != nil {

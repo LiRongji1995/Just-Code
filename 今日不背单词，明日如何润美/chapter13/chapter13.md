@@ -284,4 +284,183 @@
 - **词性**：名词（可数）
 - **例句**：She filled the basin with warm water to wash her face.（她往洗脸盆里装了温水洗脸。）
 
----
+------
+
+🎤 **33. booth /buːθ/**
+
+- **词源讲解**：来自古诺尔斯语 *búð*，意为“临时搭建的棚子或小隔间”，最初用于市场摊位，后引申为电话亭、展位、投票亭等。
+- **词义**：小隔间；展位；电话亭；投票站（n.）
+- **词性**：名词（可数）
+- **例句**：We rented a booth at the job fair to promote our company.（我们在招聘会上租了一个展位来宣传公司。）
+
+------
+
+🖱️ **34. peripheral /pəˈrɪfərəl/**
+
+- **词根讲解**：来自希腊语 *peripheria*（周围），由 *peri-*（周围）+ *pherein*（携带、带来）组成，原意为“环绕的”，在技术中引申为“外围设备”。
+- **词义**：外围的，次要的（adj.）；外部设备（如鼠标、打印机等）（n.）
+- **词性**：形容词；名词（可数）
+- **例句**：The computer lab has all the necessary peripherals like printers and scanners.（机房配备了所有必要的外部设备，如打印机和扫描仪。）
+
+------
+
+📍 **35. vicinity /vəˈsɪnəti/**
+
+- **词根讲解**：来自拉丁语 *vicinitas*，源自 *vicinus*（邻近的），再源于 *vicus*（村庄、邻居），词根意为“邻近之地”。
+- **词义**：附近地区，周边；邻近（n.）
+- **词性**：名词（不可数 / 可数）
+- **例句**：There’s a library in the vicinity of the university.（大学附近有一座图书馆。）
+
+------
+
+🏠 **36. spacious /ˈspeɪʃəs/**
+
+- **词根讲解**：来自拉丁语 *spatiosus*，源自 *spatium*（空间、间距），意为“宽敞的、空间大的”。
+- **词义**：宽敞的，广阔的（adj.）
+- **词性**：形容词
+- **例句**：Their new apartment is bright and spacious.（他们的新公寓明亮又宽敞。）
+
+------
+
+🫙 **37. airtight /ˈeətaɪt/**
+
+- **词根讲解**：由 *air*（空气）+ *tight*（紧的、不透的）组成的合成词，意为“不让空气进入的”，也引申为“无懈可击的”。
+- **词义**：密封的；无懈可击的（adj.）
+- **词性**：形容词
+- **例句**：Keep the biscuits in an airtight container.（把饼干放在密封容器里。）
+
+------
+
+🌅 **38. expanse /ɪkˈspæns/**
+
+- **词根讲解**：来自拉丁语 *expandere*（展开、扩展），与 *expand* 同源，*-anse* 为名词后缀，强调“广阔展开的区域”。
+- **词义**：广阔区域，辽阔空间（n.）
+- **词性**：名词（可数/不可数）
+- **例句**：We looked out over the vast expanse of the desert.（我们眺望着辽阔的沙漠。）
+
+------
+
+🪚 **39. carpenter /ˈkɑːpəntər/**
+
+- **词根讲解**：来自拉丁语 *carpentarius*（马车匠），源自 *carpentum*（马车），最初指制造木制马车的人，后泛指木工匠。
+- **词义**：木匠，木工（n.）
+- **词性**：名词（可数）
+- **例句**：The carpenter built a custom bookshelf for the study.（木匠为书房做了一个定制书架。）
+
+------
+
+🧱 **40. mason /ˈmeɪsən/**
+
+- **词源讲解**：来自古法语 *maçon*，源自日耳曼词根，意为“石工、泥瓦匠”，最早指擅长砌石建造的人。
+- **词义**：石匠，泥瓦匠（n.）
+- **词性**：名词（可数）
+- **例句**：The mason laid the bricks with great precision.（那位泥瓦匠精准地砌好了砖。）
+
+------
+
+🦯 **41. lever /ˈliːvər/ 或 /ˈlevər/**
+
+- **词根讲解**：来自拉丁语 *levare*（举起），源于 *levis*（轻的），词根意为“用来使东西变轻或举起的工具”。
+- **词义**：杠杆；手段，工具（n.）；撬动，操纵（v.）
+- **词性**：名词（可数）；动词（及物）
+- **例句**：He used a metal rod as a lever to lift the lid.（他用一根金属棒当杠杆撬开了盖子。）
+
+------
+
+🚩 **42. pole /pəʊl/**
+
+- **词源讲解**：来自拉丁语 *palus*（柱子、木桩），通过古法语 *pol* 演变而来，原指细长的木杆，后泛指各类“杆、极、柱”，也引申为地理或磁极。
+- **词义**：杆，柱；极（地极、磁极）（n.）
+- **词性**：名词（可数）
+- **例句**：They raised the flag on the pole.（他们把旗帜升上了旗杆。）
+
+------
+
+🛠️ **43. scaffold /ˈskæfəʊld/**
+
+- **词源讲解**：来自古法语 *eschafaut*，源自拉丁语 *catafalicum*（高台），最初意为“木台、架子”，后指建筑用的脚手架或行刑台。
+- **词义**：脚手架；（旧）行刑台（n.）
+- **词性**：名词（可数）
+- **例句**：The workers erected a scaffold to repair the roof.（工人们搭建了脚手架来修理屋顶。）
+
+------
+
+⚙️ **44. apparatus /ˌæpəˈreɪtəs/**
+
+- **词根讲解**：来自拉丁语 *apparatus*，意为“准备、设备”，源于 *apparare*（准备），由 *ad-*（去）+ *parare*（准备）构成。
+- **词义**：设备，装置；（政治或组织）机构（n.）
+- **词性**：名词（可数/不可数）
+- **例句**：The laboratory is equipped with modern scientific apparatus.（该实验室配备了现代科学设备。）
+
+------
+
+🏗️ **45. crane /kreɪn/**
+
+- **词源讲解**：来自古英语 *cran*（鹤），原指“鹤”这种鸟类，因其长颈和伸展姿态，后用于指“起重机”这一形似鹤颈的机械装置。
+- **词义**：起重机；吊车；鹤（n.）；伸长（脖子）（v.）
+- **词性**：名词（可数）；动词（及物/不及物）
+- **例句**：They used a crane to lift the steel beams.（他们用起重机吊起了钢梁。）
+
+------
+
+🛑 **46. malfunction /ˌmælˈfʌŋkʃən/**
+
+- **词根讲解**：由前缀 *mal-*（坏、错误）+ *function*（功能）组成，整体意为“功能异常”或“运转失常”。
+- **词义**：故障，失灵；发生故障（n./v.）
+- **词性**：名词（可数/不可数）；动词（不及物）
+- **例句**：The engine malfunctioned during the test flight.（发动机在试飞过程中发生故障。）
+
+------
+
+🔩 **47. weld /weld/**
+
+- **词源讲解**：来自中古英语 *welden*（熔合、结合），可能源于古挪威语 *velda*（熔化），原意为通过加热使金属连接在一起。
+- **词义**：焊接；使紧密结合（v.）；焊点，焊接处（n.）
+- **词性**：动词（及物）；名词（可数）
+- **例句**：He welded the broken metal parts together.（他把断裂的金属零件焊接在了一起。）
+
+------
+
+🔧 **48. screw /skruː/**
+
+- **词源讲解**：来自拉丁语 *scrōfa*（螺旋），通过中古法语 *escroue* 演变而来，原意为“螺旋状物”，后专指螺丝钉或类似装置。
+- **词义**：螺丝，螺钉；（v.）旋紧，拧；扭曲
+- **词性**：名词（可数）；动词（及物/不及物）
+- **例句**：Use a screwdriver to tighten the screw.（用螺丝刀把螺丝拧紧。）
+
+------
+
+💧 **49. plumb /plʌm/**
+
+- **词源讲解**：来自拉丁语 *plumbum*（铅），古人用铅锤垂直测量，因此 *plumb* 引申为“垂直、测深、管道安装”等含义。
+- **词义**：安装水管；探测（水深）；垂直的；完全地（v./adj./adv.）
+- **词性**：动词（及物）；形容词；副词
+- **例句**：The house hasn't been properly plumbed for hot water.（这房子没有安装好热水管。）
+
+------
+
+🌉 **50. viaduct /ˈvaɪədʌkt/**
+
+- **词根讲解**：来自拉丁语 *via*（道路）+ *ductus*（引导、通道），字面意思是“引导道路的结构”，指架在山谷或其他障碍物上的高架桥。
+- **词义**：高架桥，跨线桥（尤指多孔拱桥结构）（n.）
+- **词性**：名词（可数）
+- **例句**：The train passed over a stone viaduct that spanned the valley.（火车驶过一座横跨山谷的石制高架桥。）
+
+------
+
+🌉 **51. span /spæn/**
+
+- **词源讲解**：来自古英语 *spann*，原指“张开的手掌宽度”，后引申为“跨越的距离、持续的时间、结构的跨度”等。
+- **词义**：跨度；持续时间；跨越（n./v.）
+- **词性**：名词（可数/不可数）；动词（及物）
+- **例句**：The bridge spans the river from bank to bank.（这座桥横跨河流两岸。）
+
+------
+
+🚪 **52. entry /ˈentri/**
+
+- **词源讲解**：来自拉丁语 *intrare*（进入），通过古法语 *entrée* 传入英语，与 *enter*（进入）同源，原义为“进入的行为或通道”。
+- **词义**：入口；进入；条目；参赛作品（n.）
+- **词性**：名词（可数/不可数）
+- **例句**：There’s a side entry to the building next to the parking lot.（建筑旁的停车场边有一个侧入口。）
+

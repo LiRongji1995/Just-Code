@@ -151,3 +151,144 @@
 
 ---
 
+🤝 **18. consortium /kənˈsɔːtiəm/**
+
+- **词源讲解**：来自拉丁语 *consortium*（伙伴关系、联合体），由 *con-*（一起）+ *sors*（命运、份额）构成，原指共同分享利益或风险的群体，后指企业、机构组成的联盟。
+- **词义**：联合企业；财团；联盟（n.）
+- **词性**：名词（可数）
+- **例句**：Several banks formed a consortium to finance the project.（几家银行组成财团为该项目提供融资。）
+
+------
+
+🌏 **19. emigrate /ˈemɪɡreɪt/**
+
+- **词源讲解**：来自拉丁语 *emigrare*（迁出），由 *e-*（向外）+ *migrare*（迁移、移动）构成，原指永久性迁离祖国或出生地。
+- **词义**：（从本国）移居国外（v.）
+- **词性**：动词（不及物）
+- **例句**：Many people chose to emigrate for better job opportunities.（许多人为了更好的工作机会选择移居国外。）
+
+------
+
+🌿 **20. wreath /riːθ/**
+
+- **词源讲解**：来自古英语 *wriða*（扭曲、编织的东西），与 *wreathe*（盘绕、编织）同源，原指用花、叶、枝条编成的圈形装饰。
+- **词义**：花环；花圈；环状物（n.）
+- **词性**：名词（可数）
+- **例句**：They placed a wreath on the memorial to honor the soldiers.（他们在纪念碑上放了一圈花以纪念士兵。）
+
+------
+
+🏝️ **21. colony /ˈkɒləni/**
+
+- **词源讲解**：来自拉丁语 *colonia*（殖民地、农庄），源于 *colonus*（农夫、定居者），由 *colere*（耕种、居住）派生，原指一群定居在新地方的人，后来特指殖民地。
+- **词义**：殖民地；（同类动植物的）群体，聚居地（n.）
+- **词性**：名词（可数）
+- **例句**：Australia was once a British colony.（澳大利亚曾是英国的殖民地。）
+
+------
+
+🏚️ **22. slum /slʌm/**
+
+- **词源讲解**：19世纪早期英国俚语，可能源于 *slump*（下沉、衰落）或罗姆语中的 *slom*（房间），最初指贫民窟或肮脏的街区。
+- **词义**：贫民窟；（条件恶劣的）拥挤街区（n.）
+- **词性**：名词（可数）
+- **例句**：He grew up in a slum on the outskirts of the city.（他在城市郊区的贫民窟长大。）
+
+------
+
+🛡️ **23. refuge /ˈrefjuːdʒ/**
+
+- **词源讲解**：来自拉丁语 *refugium*（避难所），由 *re-*（回、再次）+ *fugere*（逃跑）组成，原意为逃回安全之处，后泛指避难、庇护。
+- **词义**：避难所；庇护；慰藉（n.）
+- **词性**：名词（可数/不可数）
+- **例句**：The villagers found refuge in the mountains during the war.（战时村民在山中避难。）
+
+------
+
+🏥 **24. asylum /əˈsaɪləm/**
+
+- **词源讲解**：来自希腊语 *asylon*（避难所），由 *a-*（否定）+ *sylon*（夺取）组成，字面意为“不可被夺取之地”，古时指庇护场所，后来也用于精神病院的意思。
+- **词义**：庇护，避难；精神病院（n.）
+- **词性**：名词（可数/不可数）
+- **例句**：The political refugee was granted asylum in the country.（该政治难民在这个国家获得了庇护。）
+
+------
+
+📊 **25. demographic /ˌdeməˈɡræfɪk/**
+
+- **词源讲解**：来自希腊语 *demos*（人民）+ *graphikos*（写、记录的），最初用于描述人口统计学相关的内容。
+- **词义**：人口的；人口统计数据；特定人群（adj./n.）
+- **词性**：形容词；名词（可数）
+- **例句**：The product is aimed at a young demographic.（该产品面向年轻人群。）
+
+------
+
+🌍 **26. ethnic /ˈeθnɪk/**
+
+- **词源讲解**：来自希腊语 *ethnikos*（民族的、异教的），源于 *ethnos*（民族、种族），最初在英语中指非基督教民族，后来泛指与民族或种族相关的事物。
+- **词义**：民族的；种族的；少数民族成员（adj./n.）
+- **词性**：形容词；名词（可数）
+- **例句**：The city has a rich variety of ethnic communities.（这座城市有多元的民族社区。）
+
+------
+
+👪 **27. clan /klæn/**
+
+- **词源讲解**：来自苏格兰盖尔语 *clann*（子女、家族），源于拉丁语 *planta*（后代、分支），原指由血缘或共同祖先联系在一起的家族群体。
+- **词义**：宗族；氏族；帮派（n.）
+- **词性**：名词（可数）
+- **例句**：The clan gathered for their annual reunion.（宗族成员聚在一起举行年度聚会。）
+
+------
+
+🏢 **28. franchise /ˈfræntʃaɪz/**
+
+- **词源讲解**：来自古法语 *franchise*（特权、自由），源于 *franc*（自由的），最初指赋予特定权利的法律许可，后发展为商业特许经营等含义。
+- **词义**：特许经营权；选举权；授予特许经营权（n./v.）
+- **词性**：名词（可数/不可数）；动词（及物）
+- **例句**：The company bought the franchise to operate the fast-food chain.（该公司买下了经营这家快餐连锁的特许权。）
+
+------
+
+🗣️ **29. respondent /rɪˈspɒndənt/**
+
+- **词源讲解**：来自拉丁语 *respondere*（回答、应答）+ *-ent*（表示人或物的名词后缀），原指在法律或调查中作出回应的人。
+- **词义**：被告；（调查问卷等的）答卷人、受访者（n.）
+- **词性**：名词（可数）
+- **例句**：Most respondents agreed with the proposed changes.（大多数受访者同意所提议的变更。）
+
+------
+
+🗳️ **30. poll /pəʊl/**
+
+- **词源讲解**：来自中世纪英语 *polle*（头部、人数），原意为“人头数”，后引申为投票、民意调查等含义。
+- **词义**：民意调查；投票；得票数（n.）；对…进行民意调查（v.）
+- **词性**：名词（可数/不可数）；动词（及物）
+- **例句**：The latest poll shows the candidate in the lead.（最新民调显示该候选人领先。）
+
+------
+
+🏅 **31. nominate /ˈnɒmɪneɪt/**
+
+- **词源讲解**：来自拉丁语 *nominare*（命名、提名），由 *nomen*（名字）+ 动词化后缀 *-are* 组成，原意为“命名某人”，后引申为提名、任命的意思。
+- **词义**：提名；任命；指定（v.）
+- **词性**：动词（及物）
+- **例句**：She was nominated for the award by her colleagues.（她被同事提名为该奖项候选人。）
+
+------
+
+🔄 **32. succession /səkˈseʃn/**
+
+- **词源讲解**：来自拉丁语 *successio*（继承、连续），源于 *succedere*（继任、跟随），由 *sub-*（在后）+ *cedere*（走）组成，原意为“紧随其后”，后引申为继承、连续不断。
+- **词义**：继任；继承；一连串；连续（n.）
+- **词性**：名词（可数/不可数）
+- **例句**：He is third in the line of succession to the throne.（他是王位继承顺位中的第三位。）
+
+------
+
+🤲 **33. welfare /ˈwelfeə(r)/**
+
+- **词源讲解**：来自中古英语 *wel fare*（过得好），由 *well*（好）+ *fare*（生活、行进）组成，原意为“安康、幸福”，后来在政府语境中指社会福利。
+- **词义**：幸福；福利；社会保障（n.）
+- **词性**：名词（不可数）
+- **例句**：The government is committed to improving the welfare of its citizens.（政府致力于改善公民的福利。）

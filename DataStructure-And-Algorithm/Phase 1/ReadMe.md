@@ -1,5 +1,3 @@
-# Phase 1: Foundations (Day 1–7)
-
 ## 🎯 Goals
 - Build solid foundations in core **data structures** and **basic algorithms**.
 - Learn to implement and apply:
@@ -69,8 +67,3 @@ For each new concept/problem:
 Keep it concise—goal is quick recall, not writing a textbook.
 
 ---
-
-## 🎬 At the End of Week 1
-- You should feel comfortable with arrays, linked lists, stacks/queues, hashing, and sorting.
-- You should have a **personal cheatsheet** for basic data structures and algorithms.
-- You should be solving **medium-level problems in ~20–30 minutes** without constant reference.

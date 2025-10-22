@@ -19,9 +19,9 @@ func romanToInt(s string) int {
 		char := s[len(s)-(i+1) : len(s)-i] //char := s[len(s)-(i+1) : len(s)-i]
 		num = roman[char]
 		if num < lastint {
-			total -= num
+			total = total - num
 		} else {
-			total += total
+			total = total + num
 		}
 		lastint = num
 	}

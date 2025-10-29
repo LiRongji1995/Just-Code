@@ -8,7 +8,11 @@ func wordPattern(pattern string, s string) bool {
 	if len(words) != len(pattern) {
 		return false
 	}
+	/*
+		字母 -> 单词，保证同一个字母不会对应不同单词
 
+		单词 -> 字母，保证不同字母不会抢同一个单词
+	*/
 	charToWord := make(map[byte]string)
 	wordToChar := make(map[string]byte)
 
